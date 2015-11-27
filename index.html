@@ -31,16 +31,16 @@
       - are common js for all import/sync mechanism. We should find a way to
       - factorize that for every app that propose contact sync.
       -
-      - In short, this should go back nto gaia somehow.
+      - In short, this should go back into gaia somehow.
       -->
-    <script src="js/misc.js" defer></script>
-    <script src="js/http_rest.js" defer></script>
-    <script src="js/simple_phone_matcher.js" defer></script>
-    <script src="js/image_thumbnail.js" defer></script>
-    <script src="js/config.js" defer></script>
-    <script src="js/image_utils.js" defer></script>
+    <script src="js/lib/gaia/config.js" defer></script>
+    <script src="js/lib/gaia/image_thumbnail.js" defer></script>
+    <script src="js/lib/gaia/image_utils.js" defer></script>
+    <script src="js/lib/gaia/misc.js" defer></script>
+    <script src="js/lib/gaia/simple_phone_matcher.js" defer></script>
 
     <!-- These has been taken from gaia, but had substantial modifications -->
+    <script src="js/lib/http_rest.js" defer></script>
     <script src="js/contacts_updater.js" defer></script>
     <script src="js/gmail_connector.js" defer></script>
     <script src="js/contacts_importer.js" defer></script>
@@ -49,7 +49,7 @@
 
     <!-- localization: do we need this? -->
     <link rel="prefetch" type="application/l10n" href="data/locales.ini" />
-    <script type="text/javascript" src="js/libs/l10n.js" defer></script>
+    <script type="text/javascript" src="js/lib/l10n.js" defer></script>
   </head>
   <body class="theme-communications">
     <section class="content">
