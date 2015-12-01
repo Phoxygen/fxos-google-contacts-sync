@@ -1,8 +1,8 @@
 /**
- * OauthManager - handle the oauth process.
+ * OAuthManager - handle the oauth process.
  *
  * This object exposess these methods:
- * - startOauth: to start the oauth process (regardless of our current
+ * - startOAuth: to start the oauth process (regardless of our current
  *   state)
  * - getAccessToken: get the access token if we have one
  *
@@ -44,7 +44,7 @@ window.addEventListener('DOMContentLoaded', () => {
     tokenValidity = new Date(localStorage.getItem(TOKEN_VALIDITY_KEY));
   }
 
-  function startOauth() {
+  function startOAuth() {
     var url = `https://accounts.google.com/o/oauth2/auth?scope=${scopes}` +
       `&redirect_uri=https%3A%2F%2Fphoxygen.eu%2Foauth_result` +
       `&response_type=token&client_id=${clientId}&approval_prompt=force` +
@@ -99,8 +99,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   loadState();
 
-  window.OauthManager = {
-    start: startOauth,
+  window.OAuthManager = {
+    start: startOAuth,
     getAccessToken: getAccessToken
   };
 

@@ -8,7 +8,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
   var authorizeButton = document.getElementById('authorize-button');
   authorizeButton.onclick = () => {
-    OauthManager.start().then(enableImport).catch(disableImport);
+    OAuthManager.start().then(enableImport).catch(disableImport);
   };
   window.addEventListener('tokenExpired', disableImport);
 
@@ -100,8 +100,8 @@ window.addEventListener('DOMContentLoaded', function() {
     var hideSpinner = hideElement.bind(this, spinner, false);
 
     showElement(spinner, true);
-    OauthManager.getAccessToken()
-    .catch(OauthManager.startOauth)
+    OAuthManager.getAccessToken()
+    .catch(OAuthManager.startOAuth)
     .then(startSync)
     .then(displayResult)
     .catch((e) => console.error(e))
@@ -114,6 +114,6 @@ window.addEventListener('DOMContentLoaded', function() {
   });
 
   // do we have a valid token?
-  OauthManager.getAccessToken().then(enableImport).catch(disableImport);
+  OAuthManager.getAccessToken().then(enableImport).catch(disableImport);
 
 });
