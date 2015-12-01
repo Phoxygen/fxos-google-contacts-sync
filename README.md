@@ -21,7 +21,7 @@ The sync is still manual at the moment.
 
 ## Technical note
 
-### Oauth
+### OAuth
 
 `app.js` launches the oauth process. The callback of the oauth is redirected to
 `oauth_result.html` (see the redirect in manifest.webapp).
