@@ -20,20 +20,18 @@ window.addEventListener('DOMContentLoaded', function() {
 
   function enableImport() {
     importButton.style.display = '';
-    authorizeButton.querySelector('div[data-l10n-id]').dataset.l10nId =
-      'reauthorize';
-    navigator.mozL10n.ready(() => {
-      navigator.mozL10n.translate(authorizeButton);
-    });
+    authorizeButton.querySelector('div[data-l10n-id="authorize"]').hidden =
+      true;
+    authorizeButton.querySelector('div[data-l10n-id="reauthorize"]').hidden =
+      false;
   }
 
   function disableImport() {
     importButton.style.display = 'none';
-    authorizeButton.querySelector('div[data-l10n-id]').dataset.l10nId =
-      'authorize';
-    navigator.mozL10n.ready(() => {
-      navigator.mozL10n.translate(authorizeButton);
-    });
+    authorizeButton.querySelector('div[data-l10n-id="authorize"]').hidden =
+      false;
+    authorizeButton.querySelector('div[data-l10n-id="reauthorize"]').hidden =
+      true;
   }
 
   function showElement(elm, doTransition) {
@@ -59,7 +57,9 @@ window.addEventListener('DOMContentLoaded', function() {
   }
 
   function showMessage(mess) {
-    messageArea.querySelector('.message').innerHTML = mess;
+    var message = messageArea.querySelector('.message');
+    message.innerHTML = mess;
+    navigator.mozL10n.translate(message);
     showElement(messageArea, false);
   }
 
@@ -83,12 +83,21 @@ window.addEventListener('DOMContentLoaded', function() {
     }
     var message =
     showMessage(
-      '<h2>Sync successfully finished:</h2>'+
-      'Summary:<br>' +
-      `<ul>
-        <li>${nbAdded} contact(s) added</li>
-        <li>${nbUpdated} contact(s) updated</li>
-        <li>${nbDeleted} contact(s) deleted</li>
+      `<h2 data-l10n-id="results-success-title">SynC SuccessfullY FinisheD</h2>
+      <p data-l10n-id="results-success-summary">SummarY:</p>
+      <ul>
+        <li data-l10n-id="results-contact-added"
+            data-l10n-args='{ "n": ${nbAdded} }'>
+          ${nbAdded} contact(s) added
+        </li>
+        <li data-l10n-id="results-contact-updated"
+            data-l10n-args='{ "n": ${nbUpdated} }'>
+            ${nbUpdated} contact(s) updated
+         </li>
+        <li data-l10n-id="results-contact-deleted"
+            data-l10n-args='{ "n": ${nbDeleted} }'>
+          ${nbDeleted} contact(s) deleted
+        </li>
       </ul>`
     );
   }
