@@ -36,26 +36,24 @@ window.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  function showElement(elm, doTransition) {
-    if (doTransition) {
-      elm.classList.add('showing');
-      setTimeout(() => {
+  function showElement(elm) {
+    elm.classList.add('showing');
+    setTimeout(() => {
+      // if showing is not there, hideElement has been called in the meantime.
+      if (elm.classList.contains('showing')) {
         elm.classList.remove('showing');
         elm.classList.add('visible');
-      }, 200);
-    } else {
-      elm.classList.add('visible');
-    }
+      }
+    }, 200);
   }
 
-  function hideElement(elm, doTransition) {
+  function hideElement(elm) {
     elm.classList.remove('visible');
-    if (doTransition) {
-      elm.classList.add('hidding');
-      setTimeout(() => {
-        elm.classList.remove('hidding');
-      }, 200);
-    }
+    elm.classList.remove('showing');
+    elm.classList.add('hidding');
+    setTimeout(() => {
+      elm.classList.remove('hidding');
+    }, 200);
   }
 
   function showMessage(mess) {
