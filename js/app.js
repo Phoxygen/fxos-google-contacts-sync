@@ -70,7 +70,7 @@ window.addEventListener('DOMContentLoaded', function() {
     var nbAdded = 0;
     for (var op of result) {
       switch (op.action) {
-        case 'created':
+        case 'added':
           nbAdded++;
           break;
         case 'updated':
@@ -105,13 +105,12 @@ window.addEventListener('DOMContentLoaded', function() {
   function startImport() {
     console.log('starting sync');
 
-    var startSync = GmailConnector.startSync.bind(GmailConnector);
-    var hideSpinner = hideElement.bind(this, spinner, false);
+    var hideSpinner = hideElement.bind(this, spinner);
 
-    showElement(spinner, true);
+    showElement(spinner);
     OAuthManager.getAccessToken()
     .catch(OAuthManager.startOAuth)
-    .then(startSync)
+    .then(accessToken => new ContactsImporter(accessToken).startSync())
     .then(displayResult)
     .catch((e) => console.error(e))
     .then(hideSpinner);
@@ -119,7 +118,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
   // listener for ok button in message area
   messageArea.querySelector('.ok').addEventListener('click', (e) => {
-    hideElement(messageArea, true);
+    hideElement(messageArea);
   });
 
   // do we have a valid token?

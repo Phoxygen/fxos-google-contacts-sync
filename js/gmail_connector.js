@@ -25,7 +25,6 @@ var GmailConnector = (function GmailConnector() {
 
   var CATEGORY = 'gmail';
   var URN_IDENTIFIER = 'urn:service:gmail:uid:';
-  var LAST_IMPORT_DATE_KEY = 'last_import_date';
 
   // Will be used as a cache for the thumbnail url for each contact
   var photoUrls = {};
@@ -67,10 +66,10 @@ var GmailConnector = (function GmailConnector() {
     });
   };
 
-  var listUpdatedContacts = function listUpdatedContacts(accessToken, date) {
+  var listUpdatedContacts = function listUpdatedContacts(accessToken, from, to) {
     photoUrls = {};
     return getContactsGroupId(accessToken).then((id) => {
-      return getContactsByGroup(id, accessToken, date);
+      return getContactsByGroup(id, accessToken, from, to);
     });
   };
 
@@ -96,7 +95,8 @@ var GmailConnector = (function GmailConnector() {
   // Retrieve all the contacts for the specific groupId
   var getContactsByGroup = function getContactsByGroup(groupId,
                                                        access_token,
-                                                       updatedMin) {
+                                                       updatedMin,
+                                                       updatedMax) {
 
     var groupUrl = END_POINT + '&group=' + groupId;
     if (updatedMin) {
@@ -104,6 +104,9 @@ var GmailConnector = (function GmailConnector() {
       // if we ask for a timerange, we want to know about deletion operations as
       // well.
       groupUrl += '&showdeleted=true';
+    }
+    if (updatedMax) {
+      groupUrl += '&updated-max=' + updatedMax.toISOString();
     }
     return performAPIRequest(groupUrl, access_token).then((response) => {
       // extract updated
@@ -139,6 +142,30 @@ var GmailConnector = (function GmailConnector() {
     req.onerror = function onError() {
       callbacks.success([]);
     };
+  };
+
+  var addNewContact = function addNewContact(mozContact) {
+    // TODO implement
+    return new Promise(function(resolve, reject) {
+      console.log('Adding contact to google', mozContact);
+      resolve({
+        type: 'google',
+        action: 'added',
+        id: 'nope'
+      });
+    });
+  };
+
+  var updateContact = function updateContact(id, updatingContact) {
+    //TODO implement
+    return new Promise(function(resolve, reject) {
+      console.log('Updating google contact', updatingContact);
+      resolve({
+        type: 'google',
+        action: 'updated',
+        id: 'nope'
+      });
+    });
   };
 
   var getImporter = function getImporter(contactsList, access_token) {
@@ -450,45 +477,6 @@ var GmailConnector = (function GmailConnector() {
     return null;
   };
 
-  var startSync = function startSync(accessToken) {
-    var now = new Date();
-    var lastImportDateStr = localStorage.getItem(LAST_IMPORT_DATE_KEY);
-    var lastImportDate = lastImportDateStr ? new Date(lastImportDateStr) : null;
-
-    if (!lastImportDate || isNaN(lastImportDate.getTime())) {
-      // no valid date, import all
-      return this.listAllContacts(accessToken)
-      .then((result) => {
-        var importer = this.getImporter(result.data, accessToken);
-        return importer.start();
-      }).then((syncResults) => {
-        // here we consider the import as success
-        localStorage.setItem(LAST_IMPORT_DATE_KEY, now);
-        return syncResults;
-      })
-      // TODO proper error handling.
-      .catch(e => {
-        console.error(e)
-        return Promise.reject(e);
-      });
-    } else {
-      // do something
-      return this.listUpdatedContacts(accessToken, lastImportDate)
-      .then(result => {
-        var importer = this.getImporter(result.data, accessToken);
-        return importer.startSync();
-      }).then((syncResults) => {
-        localStorage.setItem(LAST_IMPORT_DATE_KEY, now);
-        return syncResults;
-      })
-      // TODO proper error handling
-      .catch(e => {
-        console.error(e)
-        return Promise.reject(e);
-      });
-    }
-  };
-
   var getServiceName = (function getServiceName() {
     return 'gmail';
   })();
@@ -501,13 +489,14 @@ var GmailConnector = (function GmailConnector() {
     'listAllContacts': listAllContacts,
     'listUpdatedContacts': listUpdatedContacts,
     'listDeviceContacts': listDeviceContacts,
+    'addNewContact': addNewContact,
+    'updateContact': updateContact,
     'getImporter': getImporter,
     'cleanContacts': cleanContacts,
     'adaptDataForShowing': adaptDataForShowing,
     'adaptDataForSaving': adaptDataForSaving,
     'getContactUid': getContactUid,
     'downloadContactPicture': downloadContactPicture,
-    'startSync': startSync,
     'name': getServiceName,
     'automaticLogout': getAutomaticLogout,
     'gContactToJson': gContactToJson
