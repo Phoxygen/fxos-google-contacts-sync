@@ -55,17 +55,6 @@ var GmailConnector = (function GmailConnector() {
     return requestHeaders;
   };
 
-  // Gets a list of all contacts giving a valid access token
-  var listAllContacts = function listAllContacts(access_token) {
-    // Copy the access_token
-    // FIXME why?
-    accessToken = access_token;
-    photoUrls = {};
-    return getContactsGroupId(access_token).then((id) => {
-      return getContactsByGroup(id, accessToken);
-    });
-  };
-
   var listUpdatedContacts = function listUpdatedContacts(accessToken, from, to) {
     photoUrls = {};
     return getContactsGroupId(accessToken).then((id) => {
@@ -127,23 +116,6 @@ var GmailConnector = (function GmailConnector() {
     });
   };
 
-  // Return the list of contacts on the device imported using this connector
-  var listDeviceContacts = function listDeviceContacts(callbacks) {
-    var filterOptions = {
-      filterValue: CATEGORY,
-      filterOp: 'contains',
-      filterBy: ['category']
-    };
-
-    var req = navigator.mozContacts.find(filterOptions);
-    req.onsuccess = function() {
-      callbacks.success(req.result);
-    };
-    req.onerror = function onError() {
-      callbacks.success([]);
-    };
-  };
-
   var addNewContact = function addNewContact(mozContact) {
     // TODO implement
     return new Promise(function(resolve, reject) {
@@ -168,18 +140,6 @@ var GmailConnector = (function GmailConnector() {
     });
   };
 
-  var getImporter = function getImporter(contactsList, access_token) {
-    return new window.ContactsImporter(contactsList, access_token, this);
-  };
-
-  var cleanContacts = function cleanContacts(contactsList, mode, cb) {
-    var cleaner = new window.ContactsCleaner(contactsList);
-    window.setTimeout(cleaner.start, 0);
-    if (cb) {
-      cb(cleaner);
-    }
-  };
-
   var getValueForNode = function getValueForNode(doc, name, def) {
     var defaultValue = def || '';
 
@@ -194,55 +154,6 @@ var GmailConnector = (function GmailConnector() {
     }
 
     return defaultValue;
-  };
-
-  /*
-    Given an xml contact entry from gmail contacts we will need to output
-    a json object that contains the minimun viable information to display
-    that contact into a list.
-
-    The fields for that minimun visualization object are:
-    uid
-    givenName
-    familyName
-    email1
-  */
-  var adaptDataForShowing = function adaptDataForShowing(contact) {
-    var output = {
-      'uid': '-1',
-      'givenName': '',
-      'familyName': '',
-      'email1': '',
-      'contactPictureUri': ''
-    };
-
-    output.uid = contact.uid;
-
-    if (contact.familyName) {
-      output.familyName = contact.familyName;
-    }
-
-    if (contact.email && contact.email.length > 0) {
-      output.email1 = contact.email[0].value;
-    }
-    var tel;
-    if (contact.tel && contact.tel.length > 0) {
-      tel = contact.tel[0].value;
-    }
-    if(contact.givenName) {
-      output.givenName = contact.givenName;
-    } else if(!contact.familyName) {
-      output.givenName = output.email1 || contact.org || tel;
-    } else if(contact.familyName) {
-      output.givenName = '' ;
-    }
-
-    var photoUrl = buildContactPhotoURL(contact, accessToken);
-    if (photoUrl) {
-      output.contactPictureUri = photoUrl;
-    }
-
-    return output;
   };
 
   var adaptDataForSaving = function adaptDataForSaving(contact) {
@@ -427,41 +338,6 @@ var GmailConnector = (function GmailConnector() {
     return phones;
   };
 
-  // Given a contact from the mozcontact api, fetch the Google Contacts
-  // identifier
-  var getContactUid = function getContactUid(deviceContact) {
-    var out = -1;
-
-    var url = deviceContact.url;
-    if (Array.isArray(url)) {
-      var targetUrls = url.filter(function(aUrl) {
-        return Array.isArray(aUrl.type) &&
-          aUrl.type.indexOf('source') !== -1 &&
-          aUrl.value;
-      });
-
-      if (targetUrls[0]) {
-        out = resolveURI(targetUrls[0].value);
-      }
-    }
-
-    return out;
-  };
-
-  // From a contact URL, that we expect to be a URI
-  // return the google contact id if we find it on
-  // the uri, -1 otherwise
-  var resolveURI = function resolveURI(uri) {
-    if (uri && uri.indexOf(URN_IDENTIFIER) === 0) {
-      var output = uri.substr(URN_IDENTIFIER.length);
-      if (output && output.length > 0) {
-        return output;
-      }
-    }
-
-    return -1;
-  };
-
   var downloadContactPicture = function downloadContactPicture(googleContact,
     access_token) {
     var url = buildContactPhotoURL(googleContact, access_token);
@@ -477,29 +353,16 @@ var GmailConnector = (function GmailConnector() {
     return null;
   };
 
-  var getServiceName = (function getServiceName() {
-    return 'gmail';
-  })();
-
   var getAutomaticLogout = (function getAutomaticLogout() {
     return true;
   })();
 
   return {
-    'listAllContacts': listAllContacts,
     'listUpdatedContacts': listUpdatedContacts,
-    'listDeviceContacts': listDeviceContacts,
     'addNewContact': addNewContact,
     'updateContact': updateContact,
-    'getImporter': getImporter,
-    'cleanContacts': cleanContacts,
-    'adaptDataForShowing': adaptDataForShowing,
     'adaptDataForSaving': adaptDataForSaving,
-    'getContactUid': getContactUid,
     'downloadContactPicture': downloadContactPicture,
-    'name': getServiceName,
-    'automaticLogout': getAutomaticLogout,
-    'gContactToJson': gContactToJson
   };
 
 })();
