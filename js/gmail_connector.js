@@ -48,9 +48,9 @@ var GmailConnector = (function GmailConnector() {
   };
 
   // Returns the object used to build the headers necesary by the service
-  var buildRequestHeaders = function buildRequestHeaders(access_token) {
+  var buildRequestHeaders = function buildRequestHeaders(accessToken) {
     var requestHeaders = EXTRA_HEADERS;
-    requestHeaders.Authorization = 'OAuth ' + access_token;
+    requestHeaders.Authorization = 'OAuth ' + accessToken;
 
     return requestHeaders;
   };
@@ -62,8 +62,8 @@ var GmailConnector = (function GmailConnector() {
     });
   };
 
-  var getContactsGroupId = function getContactsGroupId(access_token) {
-    return performAPIRequest(GROUPS_END_POINT, access_token)
+  var getContactsGroupId = function getContactsGroupId(accessToken) {
+    return performAPIRequest(GROUPS_END_POINT, accessToken)
       .then((response) => {
         // Locate the entry witch systemGroup id is 'Contacts'
         var feed = response.querySelector('feed');
@@ -83,7 +83,7 @@ var GmailConnector = (function GmailConnector() {
 
   // Retrieve all the contacts for the specific groupId
   var getContactsByGroup = function getContactsByGroup(groupId,
-                                                       access_token,
+                                                       accessToken,
                                                        updatedMin,
                                                        updatedMax) {
 
@@ -97,7 +97,7 @@ var GmailConnector = (function GmailConnector() {
     if (updatedMax) {
       groupUrl += '&updated-max=' + updatedMax.toISOString();
     }
-    return performAPIRequest(groupUrl, access_token).then((response) => {
+    return performAPIRequest(groupUrl, accessToken).then((response) => {
       // extract updated
       var updated = new Date(response.querySelector('updated').textContent);
       return {
@@ -109,9 +109,9 @@ var GmailConnector = (function GmailConnector() {
 
   // Given a Google contacts api url add the authentication and
   // extra headers to perform the correct request
-  var performAPIRequest = function performAPIRequest(url, access_token) {
+  var performAPIRequest = function performAPIRequest(url, accessToken) {
     return Rest.get(url, {
-      'requestHeaders': buildRequestHeaders(access_token),
+      'requestHeaders': buildRequestHeaders(accessToken),
       'responseType': 'xml'
     });
   };
@@ -339,15 +339,21 @@ var GmailConnector = (function GmailConnector() {
   };
 
   var downloadContactPicture = function downloadContactPicture(googleContact,
-    access_token) {
-    var url = buildContactPhotoURL(googleContact, access_token);
-    return Rest.get(url, { 'responseType': 'blob' });
+    accessToken) {
+    var url = buildContactPhotoURL(googleContact, accessToken);
+    return Rest.get(url, { 'responseType': 'blob' }).then( result => {
+      if (result.status == 200) {
+        return result.response;
+      } else {
+        throw new Error(result.status);
+      }
+    });
   };
 
   // Build the url of the photo with the access token
-  var buildContactPhotoURL = function contactPhotoURL(contact, access_token) {
+  var buildContactPhotoURL = function contactPhotoURL(contact, accessToken) {
     if (photoUrls && photoUrls[contact.uid]) {
-      return photoUrls[contact.uid] + '?access_token=' + access_token;
+      return photoUrls[contact.uid] + '?access_token=' + accessToken;
     }
 
     return null;
