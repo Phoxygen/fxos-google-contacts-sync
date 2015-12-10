@@ -191,9 +191,6 @@ var GmailConnector = (function GmailConnector() {
       throw new Error('You are trying to update a deleted contact');
     }
 
-    //
-    setValueFromArrayForNode(entry, 'title', updatingContact.name);
-
     var name = entry.querySelector('name');
     if (name) {
       setValueFromArrayForNode(name, 'fullName', updatingContact.name);
