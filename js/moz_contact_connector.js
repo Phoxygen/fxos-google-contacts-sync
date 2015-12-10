@@ -86,8 +86,8 @@ var MozContactConnector = (function MozContactConnector() {
       })
       .catch((e) => {
         // a picture download fail does not block the save
-        console.log('Error while downloading picture for contact',
-                    serviceContact, e);
+        console.warn('Error while downloading picture for contact',
+                     serviceContact, e);
         return serviceContact;
       });
     } else {
@@ -172,11 +172,18 @@ var MozContactConnector = (function MozContactConnector() {
 
       req.onsuccess = function() {
         // remember the 'updated' field.
-        rememberEtag(contact);
-        resolve(contact);
+
+        // So for some reason, updated and published field are still null there.
+        // I *wish* I could simply do
+        // rememberEtag(contact);
+        // here
+        getMozContactById(contact.id).then( realContact => {
+          rememberEtag(realContact);
+          resolve(realContact);
+        });
       };
       req.onerror = reject;
-    })
+    });
   }
 
   function deleteMozContact(id) {
@@ -219,7 +226,7 @@ var MozContactConnector = (function MozContactConnector() {
    * WARNING: this method is really bad.
    *
    * Basically, it is because of the limitations of the contact API:
-   * - we cannot filter by multiple values, so we cannot get only the contact
+   * - we cannot filter by multiple values, so we cannot get only the contacts
    *   we're interested in (basically with a list of ids.)
    * - we cannot pass any predicate of any sort that would be useful for our
    *   purpose
@@ -234,10 +241,13 @@ var MozContactConnector = (function MozContactConnector() {
    * So we haven't any better choice to just loop through all the device
    * contacts to find modified contacts between 2 dates.
    *
-   * Worse: we don't have *any* way to get a list of deleted contact. So the
-   * only thing we can do is loop through the managed ids - excluding those we
-   * got from previous step - and for each of them, test their existence by
-   * querying the mozContact DB.
+   * Worse: we don't have *any* way to get a list of deleted contact. So in next
+   * step, the * only thing we can do is loop through the managed ids to find
+   * those that disappears from the getAll request.
+   *
+   * That makes a complexity of N*M with N number of devices contact and M
+   * number of devices contact that are also in google DB, so potentially
+   * N^2.
    *
    * Yep, that's what I meant by bad.
    */
@@ -290,8 +300,9 @@ var MozContactConnector = (function MozContactConnector() {
   }
 
   function hasEtagChanged(mozContact) {
-    return localStorage.getItem('mozcontact-etag#' + mozContact.id) ==
-      mozContact.updated ? mozContact.updated.getTime() : 0;
+    var etag = +localStorage.getItem('mozcontact-etag#' + mozContact.id);
+    // a null or invalid etag is considered as not changed.
+    return etag ? etag != mozContact.updated.getTime() : false;
   }
 
   return {

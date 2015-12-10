@@ -18,6 +18,8 @@ var GmailConnector = (function GmailConnector() {
     'https://www.google.com/m8/feeds/contacts/default/full/?max-results=10000';
   var GROUPS_END_POINT =
     'https://www.google.com/m8/feeds/groups/default/full/';
+  var UPDATE_END_POINT =
+    'https://www.google.com/m8/feeds/contacts/default/full'
   var EXTRA_HEADERS = {
     'GData-Version': '3.0'
   };
@@ -25,6 +27,10 @@ var GmailConnector = (function GmailConnector() {
 
   var CATEGORY = 'gmail';
   var URN_IDENTIFIER = 'urn:service:gmail:uid:';
+
+  // global utils object
+  var entryParser = new DOMParser();
+  var entrySerializer = new XMLSerializer();
 
   // Will be used as a cache for the thumbnail url for each contact
   var photoUrls = {};
@@ -54,6 +60,17 @@ var GmailConnector = (function GmailConnector() {
 
     return requestHeaders;
   };
+
+  /**
+   * This method constructs a Headers object to use when doing PUT for
+   * updating/creating contacts
+   */
+  var buildPutHeaders = function buildPutHeaders(accessToken, etag) {
+    var headers = buildRequestHeaders(accessToken);
+    headers['If-Match'] = etag;
+    headers['Content-Type'] = 'application/atom+xml';
+    return headers;
+  }
 
   var listUpdatedContacts = function listUpdatedContacts(accessToken, from, to) {
     photoUrls = {};
@@ -127,6 +144,7 @@ var GmailConnector = (function GmailConnector() {
     // TODO implement
     return new Promise(function(resolve, reject) {
       console.log('Adding contact to google', mozContact);
+      //TODO MozContactConnector.rememberEtag(mozContact);
       resolve({
         type: 'google',
         action: 'added',
@@ -135,16 +153,94 @@ var GmailConnector = (function GmailConnector() {
     });
   };
 
-  var updateContact = function updateContact(id, updatingContact) {
-    //TODO implement
-    return new Promise(function(resolve, reject) {
-      console.log('Updating google contact', updatingContact);
-      resolve({
-        type: 'google',
-        action: 'updated',
-        id: 'nope'
-      });
+  var updateContactEntry = function(id, updatingContact) {
+    var entryStr = localStorage.getItem('gContact#' + id);
+    if (!entryStr) {
+      throw new Error('No entry for gContact ' + id);
+    }
+
+    var entry = entryParser.parseFromString(entryStr, 'application/xml').
+      documentElement;
+    var isDeleted =
+      entry.getElementsByTagNameNS(GD_NAMESPACE, 'deleted').length > 0;
+    if (isDeleted) {
+      throw new Error('You are trying to update a deleted contact');
+    }
+
+    //
+    //setValueForNode(entry, 'title', updatingContact.name[0]);
+
+    var name = entry.querySelector('name');
+    if (name) {
+      setValueForNode(name, 'fullName', updatingContact.name[0]);
+      setValueForNode(name, 'givenName',
+                      updatingContact.givenName[0]);
+
+      setValueForNode(name, 'familyName', updatingContact.familyName[0]);
+      //setValueForNode(name, 'additionalName',
+                      //updatingContact.additionalName[0]);
+    }
+
+    // TODO deal with photo update.
+
+    return entry;
+  };
+
+  var getEditUrl = function getEditUrl(entry) {
+    return entry.querySelector('link[rel="edit"]').getAttribute('href');
+  };
+
+  var updateContact = function updateContact(id, updatingContact, accessToken) {
+
+    if (updatingContact.isDeleted) {
+      // TODO
+      console.log('Will delete contact ', id);
+      return Promise.resolve();
+    }
+
+    var entry = updateContactEntry(id, updatingContact);
+
+    var url = getEditUrl(entry);
+
+    return Rest.put(url, {
+      'requestHeaders': buildPutHeaders(accessToken, getEtag(entry)),
+      'responseType': 'xml'
+    }, entrySerializer.serializeToString(entry))
+    .then( result => {
+      if (result.status == 200) {
+        return result.response;
+      } else if (result.status == 412) {
+        throw new Error('changed');
+      } else {
+        throw new Error(`Error when PUTing on url ${url}: ${result.status}`);
+      }
     });
+
+    /*return fetch('url', {
+      method: 'PUT',
+      headers: buildPutHeaders(accessToken, getEtag(entry)),
+      body: entry,
+      mode: 'no-cors'
+    })
+    .then( response => {
+      if (response.status == 412) {
+        // google contact has changed remotely
+        return Promise.reject(new Error('changed'));
+      } else if (response.status == 200) {
+        MozContactConnector.rememberEtag(updatingContact);
+        return {
+          type: 'google',
+          action: 'updated',
+          id: id
+        }
+      } else {
+        return Promise.reject(new Error(
+          `Error when updating contact:
+          ${response.status} - ${response.statusText}`
+        ));
+      }
+    });
+    */
   };
 
   var getValueForNode = function getValueForNode(doc, name, def) {
@@ -163,28 +259,60 @@ var GmailConnector = (function GmailConnector() {
     return defaultValue;
   };
 
+  var setValueForNode = function setValueForNode(doc, name, value) {
+    if (!doc) {
+      throw new Error('doc is null');
+    }
+
+    var node = doc.querySelector(name);
+
+    if (node) {
+      node.textContent = value;
+    } else {
+      doc.append
+      throw new Error('No node with name: ' + name);
+    }
+  }
+
   var adaptDataForSaving = function adaptDataForSaving(contact) {
     return contact;
+  };
+
+  var isDeleted = function isDeleted(contact) {
+    return contact.getElementsByTagNameNS(GD_NAMESPACE, 'deleted').length > 0;
+  };
+
+  var getUpdated = function getUpdated(contact) {
+    var date = new Date(contact.querySelector('updated').textContent);
+    if (isNaN(date.getTime())) {
+      // sanity check, even if at the moment of writing google conveniently
+      // sends date in the right format.
+      return new Date(0);
+    } else {
+      return date;
+    }
   };
 
   // Transform a Google contact entry into json format.
   // The json format is the same used in Contacts api ;P
   var gContactToJson = function gContactToJson(googleContact) {
     var output = {};
-
     // This field will be needed for indexing within the
     // import process, not for the api
     output.uid = getUid(googleContact);
     output.etag = getEtag(googleContact);
+    output.updated = getUpdated(googleContact)
 
-    var isDeleted =
-      googleContact.getElementsByTagNameNS(GD_NAMESPACE, 'deleted').length > 0;
-
-    if (isDeleted) {
+    if (isDeleted(googleContact)) {
       output.deleted = true;
+      // delete the entry in localstorage
+      localStorage.removeItem('gContact#' + output.uid);
       // early return in this case: we only need to know it has been deleted.
       return output;
     }
+
+    // store the xml for later update
+    localStorage.setItem('gContact#' + output.uid, googleContact.outerHTML);
 
     output.name = [getValueForNode(googleContact, 'title')];
 
@@ -260,7 +388,7 @@ var GmailConnector = (function GmailConnector() {
   };
 
   var getEtag = function getEtag(contact) {
-    return contact.getAttribute('gd:etag');
+    return contact.getAttributeNS(GD_NAMESPACE, 'etag');
   };
 
   // Returns an array with the possible emails found in a contact
