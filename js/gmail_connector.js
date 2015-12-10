@@ -113,6 +113,13 @@ var GmailConnector = (function GmailConnector() {
     return Rest.get(url, {
       'requestHeaders': buildRequestHeaders(accessToken),
       'responseType': 'xml'
+    }).then(result => {
+      if (result.status == 200) {
+        return Promise.resolve(result.response);
+      } else {
+        return Promise.reject(new Error(`Error when executing request with url
+                                        ${url}: ${result.status}`));
+      }
     });
   };
 

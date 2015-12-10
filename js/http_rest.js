@@ -46,15 +46,7 @@ if (!window.Rest) {
         }
 
         xhr.onload = function(e) {
-          if (xhr.status === 200 || xhr.status === 400 || xhr.status === 0) {
-            resolve(xhr[responseProperty]);
-          } else {
-            console.error('HTTP error executing GET. ',
-                           uri, ' Status: ', xhr.status);
-            var error = new Error('HTTP error');
-            error.cause = { status: xhr.status };
-            reject(error);
-          }
+          resolve({ response: xhr[responseProperty], status: xhr.status });
         }; // onload
 
         xhr.ontimeout = function(e) {
