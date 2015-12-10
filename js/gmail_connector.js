@@ -47,9 +47,25 @@ var GmailConnector = (function GmailConnector() {
     var contacts = [];
     var numContacts = entries.length;
     for (var i = 0; i < numContacts; i++) {
-      contacts.push(gContactToJson(entries[i]));
-    }
+      var currentEntry = entries[i];
+      var oldEntry = getXMLEntry(getUid(currentEntry));
+      var jsonContact = gContactToJson(currentEntry);
 
+      // We only keep those whose etag changed
+      if ( !oldEntry || jsonContact.etag !== getEtag(oldEntry)) {
+        if (jsonContact.deleted) {
+          // delete the entry in localstorage
+          localStorage.removeItem('gContact#' + jsonContact.uid);
+        } else {
+          // store the xml for later update
+          localStorage.setItem(
+            'gContact#' + jsonContact.uid,
+            entrySerializer.serializeToString(currentEntry)
+          );
+        }
+        contacts.push(jsonContact);
+      }
+    }
     return contacts;
   };
 
@@ -72,7 +88,8 @@ var GmailConnector = (function GmailConnector() {
     return headers;
   }
 
-  var listUpdatedContacts = function listUpdatedContacts(accessToken, from, to) {
+  var listUpdatedContacts =
+  function listUpdatedContacts(accessToken, from, to) {
     photoUrls = {};
     return getContactsGroupId(accessToken).then((id) => {
       return getContactsByGroup(id, accessToken, from, to);
@@ -153,14 +170,21 @@ var GmailConnector = (function GmailConnector() {
     });
   };
 
-  var updateContactEntry = function(id, updatingContact) {
+  var getXMLEntry = function getXMLEntry(id) {
     var entryStr = localStorage.getItem('gContact#' + id);
     if (!entryStr) {
-      throw new Error('No entry for gContact ' + id);
+      return null;
     }
 
-    var entry = entryParser.parseFromString(entryStr, 'application/xml').
+    return entryParser.parseFromString(entryStr, 'application/xml').
       documentElement;
+  };
+
+  var updateContactEntry = function(id, updatingContact) {
+    var entry = getXMLEntry(id);
+    if (!entry) {
+      throw new Error('No entry for gContact ' + id);
+    }
     var isDeleted =
       entry.getElementsByTagNameNS(GD_NAMESPACE, 'deleted').length > 0;
     if (isDeleted) {
@@ -211,7 +235,13 @@ var GmailConnector = (function GmailConnector() {
     }, entrySerializer.serializeToString(entry))
     .then( result => {
       if (result.status == 200) {
-        return result.response;
+        localStorage.setItem('gContact#' + id,
+          entrySerializer.serializeToString(result.response.documentElement));
+        return {
+          type: 'google',
+          action: 'updated',
+          id
+        };
       } else if (result.status == 412) {
         throw new Error('changed');
       } else {
@@ -312,14 +342,9 @@ var GmailConnector = (function GmailConnector() {
 
     if (isDeleted(googleContact)) {
       output.deleted = true;
-      // delete the entry in localstorage
-      localStorage.removeItem('gContact#' + output.uid);
       // early return in this case: we only need to know it has been deleted.
       return output;
     }
-
-    // store the xml for later update
-    localStorage.setItem('gContact#' + output.uid, googleContact.outerHTML);
 
     output.name = [getValueForNode(googleContact, 'title')];
 
