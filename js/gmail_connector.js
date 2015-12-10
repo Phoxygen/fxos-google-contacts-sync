@@ -208,6 +208,26 @@ var GmailConnector = (function GmailConnector() {
                                updatingContact.honorificSuffix);
     }
 
+    // email
+    // remove old elem
+    for (var emailTag of entry.querySelectorAll('email')) {
+      entry.removeChild(emailTag);
+    }
+    // create new elem
+    for (var email of updatingContact.email) {
+      var elm = document.createElementNS(GD_NAMESPACE, 'email');
+      // deal with type
+      var type = email.type.length === 0 ? '' : email.type[0];
+      if (type === 'work' || type === 'home') {
+        elm.setAttribute('rel', `http://schemas.google.com/g/2005#${type}`);
+      } else {
+        elm.setAttribute('label', type);
+      }
+      // deal with address
+      elm.setAttribute('address', email.value);
+      elm.setAttribute('primary', !!email.pref);
+      entry.appendChild(elm);
+    }
     // TODO deal with photo update.
 
     return entry;
