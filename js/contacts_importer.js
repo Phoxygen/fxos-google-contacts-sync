@@ -180,7 +180,7 @@
           googleContact
         ).catch((e) => {
           if (e.message === 'changed') {
-            nextGoogleContacts.set(googleContact.uid, nextGoogleContacts);
+            nextGoogleContacts.set(googleContact.uid, googleContact);
           }
           return Promise.reject(e);
         });
@@ -207,10 +207,11 @@
           // FIXME we should implement a full conflict resolution system.
           if (googleContact.updated <  mozContact.updated) {
             // mozcontact wins
-            currentPromise = serviceConnector.updateContact(
-              googleID,
-              mozContact
-            ).catch((e) => {
+            currentPromise = OAuthManager.getAccessToken().then( accessToken => {
+              return serviceConnector.updateContact(googleID,
+                                                    mozContact,
+                                                    accessToken);
+            }).catch((e) => {
               if (e.message == 'changed') {
                 nextMozContacts.set(mozContact.id, mozContact);
               }
@@ -231,8 +232,11 @@
           currentGoogleContacts.delete(googleID);
         } else {
           // it hasn't been modified on google side, send update.
-          currentPromise = serviceConnector.updateContact(googleID,
-                                                          mozContact)
+          currentPromise = OAuthManager.getAccessToken().then( accessToken => {
+            return serviceConnector.updateContact(googleID,
+                                                  mozContact,
+                                                  accessToken)
+          })
           .catch((e) => {
             if (e.message == 'changed') {
               nextMozContacts.set(mozContact.id, mozContact);
