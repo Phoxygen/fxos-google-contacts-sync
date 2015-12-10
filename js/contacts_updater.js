@@ -46,7 +46,7 @@ contacts.Updater = (function() {
       var updatedPhoto;
 
       var arrayFields = ['givenName', 'familyName', 'photo', 'adr', 'org',
-        'url', 'note', 'tel', 'category'];
+        'url', 'note', 'tel', 'category', 'email'];
       for (var arrayField of arrayFields) {
         updateArrayField(updatedContact, updatingContact, arrayField, ignoreConflict);
       }

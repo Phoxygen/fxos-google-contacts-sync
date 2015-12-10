@@ -435,7 +435,8 @@ var GmailConnector = (function GmailConnector() {
         var emailField = fields.item(i);
 
         // Type format: rel="http://schemas.google.com/g/2005#home"
-        var type = emailField.getAttribute('rel') || DEFAULT_EMAIL_TYPE;
+        var type = emailField.getAttribute('rel') ||
+          emailField.getAttribute('label') || DEFAULT_EMAIL_TYPE;
         if (type.indexOf('#') > -1) {
           type = type.substr(type.indexOf('#') + 1);
         }
