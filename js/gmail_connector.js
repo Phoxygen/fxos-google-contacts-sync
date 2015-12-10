@@ -168,17 +168,20 @@ var GmailConnector = (function GmailConnector() {
     }
 
     //
-    //setValueForNode(entry, 'title', updatingContact.name[0]);
+    setValueFromArrayForNode(entry, 'title', updatingContact.name);
 
     var name = entry.querySelector('name');
     if (name) {
-      setValueForNode(name, 'fullName', updatingContact.name[0]);
-      setValueForNode(name, 'givenName',
-                      updatingContact.givenName[0]);
-
-      setValueForNode(name, 'familyName', updatingContact.familyName[0]);
-      //setValueForNode(name, 'additionalName',
-                      //updatingContact.additionalName[0]);
+      setValueFromArrayForNode(name, 'fullName', updatingContact.name);
+      setValueFromArrayForNode(name, 'givenName', updatingContact.givenName);
+      setValueFromArrayForNode(name, 'additionalName',
+                      updatingContact.additionalName);
+      setValueFromArrayForNode(name, 'familyName',
+                               updatingContact.familyName);
+      setValueFromArrayForNode(name, 'namePrefix',
+                               updatingContact.honorificPrefix);
+      setValueFromArrayForNode(name, 'nameSuffix',
+                               updatingContact.honorificSuffix);
     }
 
     // TODO deal with photo update.
@@ -259,20 +262,24 @@ var GmailConnector = (function GmailConnector() {
     return defaultValue;
   };
 
-  var setValueForNode = function setValueForNode(doc, name, value) {
+  var setValueFromArrayForNode =
+    function setValueFromArrayForNode(doc, name, array) {
+    if (!array || array.length === 0 || !array[0] || array[0] === '') {
+      // nothing to do
+      return;
+    }
     if (!doc) {
       throw new Error('doc is null');
     }
 
     var node = doc.querySelector(name);
 
-    if (node) {
-      node.textContent = value;
-    } else {
-      doc.append
-      throw new Error('No node with name: ' + name);
+    if (!node) {
+      node = document.createElementNS(GD_NAMESPACE, 'additionalName');
+      doc.appendChild(node);
     }
-  }
+    node.textContent = array[0];
+  };
 
   var adaptDataForSaving = function adaptDataForSaving(contact) {
     return contact;
