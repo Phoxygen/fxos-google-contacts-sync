@@ -66,7 +66,7 @@ contacts.Updater = (function() {
 
       var fields = ['bday', 'anniversary'];
       for (var field of fields) {
-        updateField(updatedContact, updatingContact, field);
+        updateField(updatedContact, updatingContact, field, ignoreConflict);
       }
 
       // Special case for note: only the first note can be synchronized with

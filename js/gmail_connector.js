@@ -24,6 +24,7 @@ var GmailConnector = (function GmailConnector() {
     'GData-Version': '3.0'
   };
   var GD_NAMESPACE = 'http://schemas.google.com/g/2005';
+  var GCONTACT_NAMESPACE = 'http://schemas.google.com/contact/2008';
   var ATOM_NAMESPACE = 'http://www.w3.org/2005/Atom';
   var GD_IM_PROTOCOL = {
     "AIM": "http://schemas.google.com/g/2005#AIM",
@@ -341,7 +342,45 @@ var GmailConnector = (function GmailConnector() {
       orgTitle.textContent = updatingContact.jobTitle[0];
     }
 
-    // TODO address
+    // birthdaynd anniversary
+    var bdayTag = entry.querySelector('birthday');
+    var birthday = updatingContact.bday;
+    if (birthday) {
+      if (!bdayTag) {
+        bdayTag = document.createElementNS(GCONTACT_NAMESPACE, 'birthday');
+        entry.appendChild(bdayTag);
+      }
+      bdayTag.setAttribute('when', birthday.toISOString().substr(0, 10));
+    } else if (bdayTag) { // no bday, so remove tag
+      bdayTag.parentNode.removeChild(bdayTag);
+    }
+
+    // anniversary
+    // we only map the first one. Google allow several event, with different
+    // type of rel.
+    // TODO atm we don't delete anniversary, because we can't know which one to
+    // delete with certainty.
+    var anniversary = updatingContact.anniversary;
+    if (anniversary) {
+      var anniversaryTag = entry.querySelector('event[rel="anniversary"]');
+      if (!anniversaryTag) {
+        anniversaryTag = document.createElementNS(GCONTACT_NAMESPACE, 'event');
+        anniversaryTag.setAttribute('rel', 'anniversary');
+        entry.appendChild(anniversary);
+      }
+      var whenTag = anniversaryTag.querySelector('when');
+      if (!whenTag) {
+        whenTag = document.createElementNS(GD_NAMESPACE, 'when');
+        anniversaryTag.appendChild(whenTag);
+      }
+      whenTag.setAttribute('startTime',
+                           anniversary.toISOString().substr(0, 10));
+    }
+
+    // Address not supported atm, because we cannot do this without losing data.
+    // TODO we need to maintain a local DB of data from google we cannot keep in
+    // a mozcontact, and see how to deal with them.
+    //
     // TODO place ?
     // TODO extended fields: store the rest of datas:
     // - nickname
@@ -540,6 +579,16 @@ var GmailConnector = (function GmailConnector() {
       var bdayMS = Date.parse(bday.getAttribute('when'));
       if (!isNaN(bdayMS)) {
         output.bday = new Date(bdayMS);
+      }
+    }
+
+    var anniversary = googleContact.querySelector(
+      'event[rel="anniversary"] > when'
+    );
+    if (anniversary) {
+      var anniversaryMS = Date.parse(anniversary.getAttribute('startTime'));
+      if (!isNaN(anniversaryMS)) {
+        output.anniversary = new Date(anniversaryMS);
       }
     }
 
