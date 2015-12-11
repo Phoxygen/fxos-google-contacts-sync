@@ -24,6 +24,16 @@ var GmailConnector = (function GmailConnector() {
     'GData-Version': '3.0'
   };
   var GD_NAMESPACE = 'http://schemas.google.com/g/2005';
+  var GD_IM_PROTOCOL = {
+    "AIM": "http://schemas.google.com/g/2005#AIM",
+    "MSN": "http://schemas.google.com/g/2005#MSN",
+    "YAHOO": "http://schemas.google.com/g/2005#YAHOO",
+    "SKYPE": "http://schemas.google.com/g/2005#SKYPE",
+    "QQ": "http://schemas.google.com/g/2005#QQ",
+    "GOOGLE_TALK": "http://schemas.google.com/g/2005#GOOGLE_TALK",
+    "ICQ": "http://schemas.google.com/g/2005#ICQ",
+    "JABBER": "http://schemas.google.com/g/2005#JABBER",
+  }
 
   var CATEGORY = 'gmail';
   var URN_IDENTIFIER = 'urn:service:gmail:uid:';
@@ -225,6 +235,49 @@ var GmailConnector = (function GmailConnector() {
       elm.setAttribute('primary', !!email.pref);
       entry.appendChild(elm);
     }
+
+    // IM
+    for (var imTag of entry.querySelectorAll('im')) {
+      imTag.parentNode.removeChild(imTag);
+    }
+    for (var impp of updatingContact.impp) {
+      var elm = document.createElementNS(GD_NAMESPACE, 'im');
+      elm.setAttribute('address', impp.value);
+      elm.setAttribute('primary', !!impp.pref);
+
+      var type = impp.type.length === 0 ? '' : impp.type[0];
+      if (type === 'work' || type === 'home' || type === 'other' ||
+          type === 'netmeeting') {
+        elm.setAttribute('rel', `http://schemas.google.com/g/2005#${type}`);
+      } else {
+        elm.setAttribute('label', type);
+      }
+      if (impp.type && impp.type.length > 1) {
+        var protocol = impp.type[1];
+        elm.setAttribute('protocol', GD_IM_PROTOCOL[protocol] || protocol);
+      }
+      entry.appendChild(elm);
+    }
+
+    // TODO note
+
+    // TODO tel
+    //
+    // TODO organization
+    // TODO address
+    // TODO place ?
+    // TODO extended fields: store the rest of datas:
+    // - nickname
+    // - url ?
+    // - category ?
+    // - bday ?
+    // - anniversary ?
+    // - sex
+    // - gender identity
+    // - key
+    //
+
+
     // TODO deal with photo update.
 
     return entry;
@@ -393,6 +446,8 @@ var GmailConnector = (function GmailConnector() {
 
     output.email = parseEmails(googleContact);
 
+    output.impp = parseIms(googleContact);
+
     output.adr = parseAddress(googleContact);
 
     output.tel = parsePhones(googleContact);
@@ -440,32 +495,64 @@ var GmailConnector = (function GmailConnector() {
     return contact.getAttributeNS(GD_NAMESPACE, 'etag');
   };
 
+  /**
+   * This function parse the type of a mean of contact from google such as tel,
+   * email, im etc...
+   * The type information is either, in this priority order:
+   * - a rel element with predefined values such as
+   *   http://schemas.google.com/g/2005#home (possible value are #home, #work,
+   *   #other, and #netmeeting for im)
+   * - a label element for custom types
+   *
+   */
+  var parseType = function parseType(contactField) {
+    var DEFAULT_TYPE = 'other';
+    var type = contactField.getAttribute('rel') ||
+      contactField.getAttribute('label') ||
+      DEFAULT_TYPE;
+    if (type.indexOf('#' > -1)) {
+      type = type.substr(type.indexOf('#') + 1);
+    }
+    return type;
+  };
+
   // Returns an array with the possible emails found in a contact
   // as a ContactField format
   var parseEmails = function parseEmails(googleContact) {
     var DEFAULT_EMAIL_TYPE = 'other';
     var emails = [];
-    var fields = googleContact.getElementsByTagNameNS(GD_NAMESPACE,
-      'email');
+    var fields = googleContact.getElementsByTagNameNS(GD_NAMESPACE, 'email');
     if (fields && fields.length > 0) {
       for (var i = 0; i < fields.length; i++) {
         var emailField = fields.item(i);
-
-        // Type format: rel="http://schemas.google.com/g/2005#home"
-        var type = emailField.getAttribute('rel') ||
-          emailField.getAttribute('label') || DEFAULT_EMAIL_TYPE;
-        if (type.indexOf('#') > -1) {
-          type = type.substr(type.indexOf('#') + 1);
-        }
-
         emails.push({
-          'type': [type],
-          'value': emailField.getAttribute('address')
+          'type': [parseType(emailField)],
+          'value': emailField.getAttribute('address'),
+          'pref': emailField.getAttribute('primary')
         });
       }
     }
-
     return emails;
+  };
+
+  var parseIms = function parseIms(googleContact) {
+    var DEFAULT_IM_TYPE = 'other';
+    var ims = [];
+    var fields = googleContact.getElementsByTagNameNS(GD_NAMESPACE, 'im');
+    if (fields) {
+      for (var imTag of fields) {
+        var protocol = imTag.getAttribute('protocol');
+        if (protocol.indexOf('#') > -1) {
+          protocol = protocol.substr(protocol.indexOf('#') + 1);
+        }
+        ims.push({
+          'type': [parseType(imTag), imTag.getAttribute('protocol')],
+          'value': imTag.getAttribute('address'),
+          'pref': imTag.getAttribute('primary')
+        });
+      }
+    }
+    return ims;
   };
 
   // Given a google contact returns an array of ContactAddress
@@ -506,12 +593,7 @@ var GmailConnector = (function GmailConnector() {
     if (fields && fields.length > 0) {
       for (var i = 0; i < fields.length; i++) {
         var field = fields.item(i);
-
-        // Type format: rel="http://schemas.google.com/g/2005#home"
-        var type = field.getAttribute('rel') || DEFAULT_PHONE_TYPE;
-        if (type.indexOf('#') > -1) {
-          type = type.substr(type.indexOf('#') + 1);
-        }
+        var type = parseType(field);
 
         phones.push({
           'type': [GMAIL_MAP[type] || type],
