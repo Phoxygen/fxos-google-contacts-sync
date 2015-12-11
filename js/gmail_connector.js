@@ -311,7 +311,36 @@ var GmailConnector = (function GmailConnector() {
       entry.appendChild(elm);
     }
 
-    // TODO organization
+    // organization
+    if (updatingContact.org && updatingContact.org.length > 0) {
+      var organization = entry.querySelector('organization');
+      if (!organization) {
+        organization = document.createElementNS(GD_NAMESPACE, 'organization');
+        entry.appendChild(organization);
+      }
+      var orgName = organization.querySelector('orgName');
+      if (!orgName) {
+        orgName = document.createElementNS(GD_NAMESPACE, 'orgName');
+        organization.appendChild(orgName);
+      }
+      orgName.textContent = updatingContact.org[0];
+    }
+
+    // job title
+    if (updatingContact.jobTitle && updatingContact.jobTitle.length > 0) {
+      var organization = entry.querySelector('organization');
+      if (!organization) {
+        organization = document.createElementNS(GD_NAMESPACE, 'organization');
+        entry.appendChild(organization);
+      }
+      var orgTitle = organization.querySelector('orgTitle');
+      if (!orgTitle) {
+        orgTitle = document.createElementNS(GD_NAMESPACE, 'orgTitle');
+        organization.appendChild(orgTitle);
+      }
+      orgTitle.textContent = updatingContact.jobTitle[0];
+    }
+
     // TODO address
     // TODO place ?
     // TODO extended fields: store the rest of datas:
