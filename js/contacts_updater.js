@@ -33,8 +33,10 @@ contacts.Updater = (function() {
   function updateArrayFieldByField(updatedContact, updatingContact, fieldName,
                                    ignoreConflict) {
     if (ignoreConflict) {
-      for (var i = 0; i < updatingContact[fieldName].length; i++) {
-        updatedContact[fieldName][i] = updatingContact[fieldName][i];
+      if (updatingContact[fieldName]) {
+        for (var i = 0; i < updatingContact[fieldName].length; i++) {
+          updatedContact[fieldName][i] = updatingContact[fieldName][i];
+        }
       }
     } else {
       // TODO report conflict
