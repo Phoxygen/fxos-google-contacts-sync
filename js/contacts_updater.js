@@ -30,6 +30,17 @@ contacts.Updater = (function() {
     }
   }
 
+  function updateArrayFieldByField(updatedContact, updatingContact, fieldName,
+                                   ignoreConflict) {
+    if (ignoreConflict) {
+      for (var i = 0; i < updatingContact[fieldName].length; i++) {
+        updatedContact[fieldName][i] = updatingContact[fieldName][i];
+      }
+    } else {
+      // TODO report conflict
+    }
+  }
+
   function updateField(updatedContact, updatingContact, fieldName, ignoreConflict) {
     if (ignoreConflict) {
       updatedContact[fieldName] = updatingContact[fieldName];
@@ -46,7 +57,7 @@ contacts.Updater = (function() {
       var updatedPhoto;
 
       var arrayFields = ['givenName', 'familyName', 'photo', 'adr', 'org',
-        'url', 'note', 'tel', 'category', 'email', 'impp'];
+        'url', 'tel', 'category', 'email', 'impp'];
       for (var arrayField of arrayFields) {
         updateArrayField(updatedContact, updatingContact, arrayField, ignoreConflict);
       }
@@ -55,6 +66,11 @@ contacts.Updater = (function() {
       for (var field of fields) {
         updateField(updatedContact, updatingContact, field);
       }
+
+      // Special case for note: only the first note can be synchronized with
+      // google
+      updateArrayFieldByField(updatedContact, updatingContact, 'note',
+                              ignoreConflict);
 
       updatedContact.name = [((updatedContact.givenName[0] ?
                              updatedContact.givenName[0] : '') + ' ' +

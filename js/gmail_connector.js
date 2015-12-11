@@ -24,6 +24,7 @@ var GmailConnector = (function GmailConnector() {
     'GData-Version': '3.0'
   };
   var GD_NAMESPACE = 'http://schemas.google.com/g/2005';
+  var ATOM_NAMESPACE = 'http://www.w3.org/2005/Atom';
   var GD_IM_PROTOCOL = {
     "AIM": "http://schemas.google.com/g/2005#AIM",
     "MSN": "http://schemas.google.com/g/2005#MSN",
@@ -259,7 +260,20 @@ var GmailConnector = (function GmailConnector() {
       entry.appendChild(elm);
     }
 
-    // TODO note
+    // note
+    // we can synchronize only the first note
+    var content = entry.querySelector('content');
+    var note = updatingContact.note ? updatingContact.note[0] : null;
+    if (note) {
+      if (!content) {
+        content = document.createElementNS(ATOM_NAMESPACE, 'content');
+        entry.appendChild(content);
+      }
+      content.textContent = note;
+    } else if (content) {
+      content.parentNode.removeChild(content);
+    }
+
 
     // TODO tel
     //
