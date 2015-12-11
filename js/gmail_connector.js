@@ -275,8 +275,42 @@ var GmailConnector = (function GmailConnector() {
     }
 
 
-    // TODO tel
-    //
+    // phone
+    for (var phoneTag of entry.querySelectorAll('phoneNumber')) {
+      phoneTag.parentNode.removeChild(phoneTag);
+    }
+    // we hook a few elements to known element to google, to nicely select in
+    // the google dropdown list.
+    // We won't try to be too clever here. For example, we have a #home in both
+    // side, but it appears as Personal in google, but we also have a personal
+    // builtin type in MozContact... In this mess, better not try to fix
+    // everything. Less code, less bugs, less data loss.
+    var TEL_TYPE_REL_MAP = {
+      'faxOffice' : GD_NAMESPACE + '#work_fax',
+      'faxHome' : GD_NAMESPACE + '#home_fax',
+      'work': GD_NAMESPACE + '#work',
+      'home': GD_NAMESPACE + '#home',
+      'mobile': GD_NAMESPACE + '#mobile',
+      'pager': GD_NAMESPACE + '#pager'
+    };
+    // so google displays a label (NOT a rel!) of grandcentral as Google
+    // Voice... Wow!
+    var TEL_TYPE_LABEL_MAP = {
+      'Google Voice': 'grandcentral'
+    }
+    for (var tel of updatingContact.tel) {
+      var elm = document.createElementNS(GD_NAMESPACE, 'phoneNumber');
+      var type = tel.type.length === 0 ? '' : tel.type[0];
+      if (TEL_TYPE_REL_MAP[type]) {
+        elm.setAttribute('rel', TEL_TYPE_REL_MAP[type])
+      } else {
+        elm.setAttribute('label', TEL_TYPE_LABEL_MAP[type] || type);
+      }
+      elm.setAttribute('primary', !!tel.pref);
+      elm.textContent = tel.value;
+      entry.appendChild(elm);
+    }
+
     // TODO organization
     // TODO address
     // TODO place ?
@@ -595,11 +629,11 @@ var GmailConnector = (function GmailConnector() {
   // ContactField with the pones stored for that contact
   var parsePhones = function parsePhones(googleContact) {
     var DEFAULT_PHONE_TYPE = 'other';
+    // we only change what are obvious correspondance.
     var GMAIL_MAP = {
       'work_fax' : 'faxOffice',
       'home_fax' : 'faxHome',
-      'pager' : 'other',
-      'main' : 'other'
+      'grandcentral': 'Google Voice'
     };
     var phones = [];
     var fields = googleContact.getElementsByTagNameNS(GD_NAMESPACE,
@@ -610,7 +644,7 @@ var GmailConnector = (function GmailConnector() {
         var type = parseType(field);
 
         phones.push({
-          'type': [GMAIL_MAP[type] || type],
+          'type': [ GMAIL_MAP[type] || type],
           'value': field.textContent
         });
       }
