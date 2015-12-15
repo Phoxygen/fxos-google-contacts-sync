@@ -246,7 +246,9 @@
         }
       } else {
         // in mozcontact, but not in google, insert it in google
-        currentPromise = serviceConnector.addNewContact(mozContact);
+        currentPromise = OAuthManager.getAccessToken().then( accessToken => {
+          return serviceConnector.addNewContact(mozContact, accessToken);
+        });
       }
       return currentPromise;
     }

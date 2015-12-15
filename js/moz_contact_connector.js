@@ -108,20 +108,23 @@ var MozContactConnector = (function MozContactConnector() {
       // using localstorage for now
       // we naively store both side of the relationship for now.
       // TODO replace by indexed DB ?
-      localStorage.setItem('mozcontact#' + contact.id, serviceContact.uid);
-      localStorage.setItem(serviceContact.uid, contact.id);
-      addKnownMozId(contact.id);
+      rememberLink(contact.id, serviceContact.uid);
       return {
         type: 'mozilla',
         action: 'added',
         id: contact.id
-
       };
     });
   }
 
   function getGoogleId(mozId) {
     return localStorage.getItem('mozcontact#' + mozId);
+  }
+
+  function rememberLink(mozContactId, gContactId) {
+    localStorage.setItem('mozcontact#' + mozContactId, gContactId);
+    localStorage.setItem(gContactId, mozContactId);
+    addKnownMozId(mozContactId);
   }
 
   // TODO replace by indexed DB
@@ -316,7 +319,8 @@ var MozContactConnector = (function MozContactConnector() {
     updateContact: updateContact,
     importContact: importContact,
     getChangedMozContacts: getChangedMozContacts,
-    getGoogleId: getGoogleId
+    getGoogleId: getGoogleId,
+    rememberLink: rememberLink
   };
 
 })();

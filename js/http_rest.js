@@ -74,6 +74,7 @@ if (!window.Rest) {
     Rest.prototype = {
 
       get: makeRequest.bind(this, 'GET'),
+      post: makeRequest.bind(this, 'POST'),
       put: makeRequest.bind(this, 'PUT')
     };
 

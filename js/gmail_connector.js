@@ -18,8 +18,8 @@ var GmailConnector = (function GmailConnector() {
     'https://www.google.com/m8/feeds/contacts/default/full/?max-results=10000';
   var GROUPS_END_POINT =
     'https://www.google.com/m8/feeds/groups/default/full/';
-  var UPDATE_END_POINT =
-    'https://www.google.com/m8/feeds/contacts/default/full'
+  var CREATE_END_POINT =
+    'https://www.google.com/m8/feeds/contacts/default/full';
   var EXTRA_HEADERS = {
     'GData-Version': '3.0',
     'Content-Type': 'application/atom+xml'
@@ -181,15 +181,40 @@ var GmailConnector = (function GmailConnector() {
     });
   };
 
-  var addNewContact = function addNewContact(mozContact) {
-    // TODO implement
-    return new Promise(function(resolve, reject) {
-      console.log('Adding contact to google', mozContact);
-      //TODO MozContactConnector.rememberEtag(mozContact);
-      resolve({
-        type: 'google',
-        action: 'added',
-        id: 'nope'
+  var addNewContact = function addNewContact(mozContact, accessToken) {
+    return getContactsGroupId(accessToken).then( groupId => {
+      var entryTemplate =
+        '<entry xmlns="http://www.w3.org/2005/Atom"' +
+        '  xmlns:gd="http://schemas.google.com/g/2005" ' +
+        'xmlns:gContact="http://schemas.google.com/contact/2008">' +
+        '  <category scheme="http://schemas.google.com/g/2005#kind"' +
+        '    term="http://schemas.google.com/contact/2008#contact"/>' +
+        `<gContact:groupMembershipInfo deleted="false" href="${groupId}"/>` +
+        '</entry>';
+      var entry = entryParser.parseFromString(entryTemplate, 'application/xml').
+        documentElement;
+      updateContactEntry(entry, mozContact);
+
+      return Rest.post(CREATE_END_POINT, {
+        'requestHeaders': buildRequestHeaders(accessToken),
+        'responseType': 'xml'
+      }, entrySerializer.serializeToString(entry))
+      .then( result => {
+        if (result.status == 201) {
+          var gContact = result.response.documentElement;
+          var id = getUid(gContact);
+          MozContactConnector.rememberLink(mozContact.id, id);
+          localStorage.setItem('gContact#' + id,
+            entrySerializer.serializeToString(gContact));
+          return {
+            type: 'google',
+            action: 'added',
+            id
+          };
+        } else {
+          throw new Error(`Error when posting on url ${CREATE_END_POINT}:
+                          ${result.status}`);
+        }
       });
     });
   };
