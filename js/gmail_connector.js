@@ -115,22 +115,28 @@ var GmailConnector = (function GmailConnector() {
   };
 
   var getContactsGroupId = function getContactsGroupId(accessToken) {
-    return performAPIRequest(GROUPS_END_POINT, accessToken)
-      .then((response) => {
-        // Locate the entry witch systemGroup id is 'Contacts'
-        var feed = response.querySelector('feed');
-        if (feed === null) {
-          return Promise.reject('feed is null');
-        }
+    var groupId = localStorage.getItem('contacts_group_id');
+    if (groupId) {
+      return Promise.resolve(groupId);
+    } else {
+      return performAPIRequest(GROUPS_END_POINT, accessToken)
+        .then((response) => {
+          // Locate the entry witch systemGroup id is 'Contacts'
+          var feed = response.querySelector('feed');
+          if (feed === null) {
+            return Promise.reject('feed is null');
+          }
 
-        var sgc = feed.querySelector('systemGroup[id="Contacts"]');
-        if (sgc !== null) {
-          // return id
-          return sgc.parentNode.querySelector('id').textContent;
-        } else {
-          Promise.reject('No systemGroup with id "Contacts" found');
-        }
-    });
+          var sgc = feed.querySelector('systemGroup[id="Contacts"]');
+          if (sgc !== null) {
+            var groupId = sgc.parentNode.querySelector('id').textContent;
+            localStorage.setItem('contacts_group_id', groupId);
+            return groupId;
+          } else {
+            Promise.reject('No systemGroup with id "Contacts" found');
+          }
+      });
+    }
   };
 
   // Retrieve all the contacts for the specific groupId
