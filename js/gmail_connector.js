@@ -453,32 +453,6 @@ var GmailConnector = (function GmailConnector() {
         throw new Error(`Error when PUTing on url ${url}: ${result.status}`);
       }
     });
-
-    /*return fetch('url', {
-      method: 'PUT',
-      headers: buildPutHeaders(accessToken, getEtag(entry)),
-      body: entry,
-      mode: 'no-cors'
-    })
-    .then( response => {
-      if (response.status == 412) {
-        // google contact has changed remotely
-        return Promise.reject(new Error('changed'));
-      } else if (response.status == 200) {
-        MozContactConnector.rememberEtag(updatingContact);
-        return {
-          type: 'google',
-          action: 'updated',
-          id: id
-        }
-      } else {
-        return Promise.reject(new Error(
-          `Error when updating contact:
-          ${response.status} - ${response.statusText}`
-        ));
-      }
-    });
-    */
   };
 
   var getValueForNode = function getValueForNode(doc, name, def) {
