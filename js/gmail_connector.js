@@ -198,11 +198,7 @@ var GmailConnector = (function GmailConnector() {
       documentElement;
   };
 
-  var updateContactEntry = function(id, updatingContact) {
-    var entry = getXMLEntry(id);
-    if (!entry) {
-      throw new Error('No entry for gContact ' + id);
-    }
+  var updateContactEntry = function(entry, updatingContact) {
     var isDeleted =
       entry.getElementsByTagNameNS(GD_NAMESPACE, 'deleted').length > 0;
     if (isDeleted) {
@@ -210,18 +206,20 @@ var GmailConnector = (function GmailConnector() {
     }
 
     var name = entry.querySelector('name');
-    if (name) {
-      setValueFromArrayForNode(name, 'fullName', updatingContact.name);
-      setValueFromArrayForNode(name, 'givenName', updatingContact.givenName);
-      setValueFromArrayForNode(name, 'additionalName',
-                      updatingContact.additionalName);
-      setValueFromArrayForNode(name, 'familyName',
-                               updatingContact.familyName);
-      setValueFromArrayForNode(name, 'namePrefix',
-                               updatingContact.honorificPrefix);
-      setValueFromArrayForNode(name, 'nameSuffix',
-                               updatingContact.honorificSuffix);
+    if (!name) {
+      name = document.createElementNS(GD_NAMESPACE, 'name');
+      entry.appendChild(name);
     }
+    setValueFromArrayForNode(name, 'fullName', updatingContact.name);
+    setValueFromArrayForNode(name, 'givenName', updatingContact.givenName);
+    setValueFromArrayForNode(name, 'additionalName',
+                    updatingContact.additionalName);
+    setValueFromArrayForNode(name, 'familyName',
+                             updatingContact.familyName);
+    setValueFromArrayForNode(name, 'namePrefix',
+                             updatingContact.honorificPrefix);
+    setValueFromArrayForNode(name, 'nameSuffix',
+                             updatingContact.honorificSuffix);
 
     // email
     // remove old elem
@@ -248,23 +246,25 @@ var GmailConnector = (function GmailConnector() {
     for (var imTag of entry.querySelectorAll('im')) {
       imTag.parentNode.removeChild(imTag);
     }
-    for (var impp of updatingContact.impp) {
-      var elm = document.createElementNS(GD_NAMESPACE, 'im');
-      elm.setAttribute('address', impp.value);
-      elm.setAttribute('primary', !!impp.pref);
+    if (updatingContact.impp) {
+      for (var impp of updatingContact.impp) {
+        var elm = document.createElementNS(GD_NAMESPACE, 'im');
+        elm.setAttribute('address', impp.value);
+        elm.setAttribute('primary', !!impp.pref);
 
-      var type = impp.type.length === 0 ? '' : impp.type[0];
-      if (type === 'work' || type === 'home' || type === 'other' ||
-          type === 'netmeeting') {
-        elm.setAttribute('rel', `http://schemas.google.com/g/2005#${type}`);
-      } else {
-        elm.setAttribute('label', type);
+        var type = impp.type.length === 0 ? '' : impp.type[0];
+        if (type === 'work' || type === 'home' || type === 'other' ||
+            type === 'netmeeting') {
+          elm.setAttribute('rel', `http://schemas.google.com/g/2005#${type}`);
+        } else {
+          elm.setAttribute('label', type);
+        }
+        if (impp.type && impp.type.length > 1) {
+          var protocol = impp.type[1];
+          elm.setAttribute('protocol', GD_IM_PROTOCOL[protocol] || protocol);
+        }
+        entry.appendChild(elm);
       }
-      if (impp.type && impp.type.length > 1) {
-        var protocol = impp.type[1];
-        elm.setAttribute('protocol', GD_IM_PROTOCOL[protocol] || protocol);
-      }
-      entry.appendChild(elm);
     }
 
     // note
@@ -323,6 +323,11 @@ var GmailConnector = (function GmailConnector() {
       var organization = entry.querySelector('organization');
       if (!organization) {
         organization = document.createElementNS(GD_NAMESPACE, 'organization');
+        // this is the 'company' field of contact form. So by default, it is a
+        // 'work' type. If changed through google interface, we still honor the
+        // new value though.
+        organization.setAttribute('rel',
+                                  'http://schemas.google.com/g/2005#work');
         entry.appendChild(organization);
       }
       var orgName = organization.querySelector('orgName');
@@ -392,8 +397,6 @@ var GmailConnector = (function GmailConnector() {
     // - nickname
     // - url ?
     // - category ?
-    // - bday ?
-    // - anniversary ?
     // - sex
     // - gender identity
     // - key
@@ -417,7 +420,11 @@ var GmailConnector = (function GmailConnector() {
       return Promise.resolve();
     }
 
-    var entry = updateContactEntry(id, updatingContact);
+    var entry = getXMLEntry(id);
+    if (!entry) {
+      throw new Error('No entry for gContact ' + id);
+    }
+    updateContactEntry(entry, updatingContact);
 
     var url = getEditUrl(entry);
 
@@ -497,7 +504,7 @@ var GmailConnector = (function GmailConnector() {
     var node = doc.querySelector(name);
 
     if (!node) {
-      node = document.createElementNS(GD_NAMESPACE, 'additionalName');
+      node = document.createElementNS(GD_NAMESPACE, name);
       doc.appendChild(node);
     }
     node.textContent = array[0];
