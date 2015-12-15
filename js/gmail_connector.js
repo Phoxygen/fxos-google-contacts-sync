@@ -21,7 +21,8 @@ var GmailConnector = (function GmailConnector() {
   var UPDATE_END_POINT =
     'https://www.google.com/m8/feeds/contacts/default/full'
   var EXTRA_HEADERS = {
-    'GData-Version': '3.0'
+    'GData-Version': '3.0',
+    'Content-Type': 'application/atom+xml'
   };
   var GD_NAMESPACE = 'http://schemas.google.com/g/2005';
   var GCONTACT_NAMESPACE = 'http://schemas.google.com/contact/2008';
@@ -83,7 +84,12 @@ var GmailConnector = (function GmailConnector() {
 
   // Returns the object used to build the headers necesary by the service
   var buildRequestHeaders = function buildRequestHeaders(accessToken) {
-    var requestHeaders = EXTRA_HEADERS;
+    var requestHeaders = {};
+    for (var i in EXTRA_HEADERS) {
+      if (EXTRA_HEADERS.hasOwnProperty(i)) {
+        requestHeaders[i] = EXTRA_HEADERS[i];
+      }
+    }
     requestHeaders.Authorization = 'OAuth ' + accessToken;
 
     return requestHeaders;
