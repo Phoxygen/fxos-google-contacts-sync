@@ -21,10 +21,9 @@ var MozContactConnector = (function MozContactConnector() {
   function updateContact(mozContactId, updatingContact) {
 
     if (updatingContact.deleted) {
-      console.log('Will delete contact', mozContactId);
+      console.log('Will delete contact', mozContactId, updatingContact);
       return deleteMozContact(mozContactId).then(() => {
-        localStorage.removeItem(updatingContact.uid);
-        localStorage.removeItem('mozcontact#' + mozContactId);
+        forgetLink(updatingContact.uid);
         return {
           type: 'mozilla',
           action: 'deleted',
@@ -97,7 +96,7 @@ var MozContactConnector = (function MozContactConnector() {
   }
 
   function importContact(serviceContact) {
-    if (serviceContact.isDeleted) {
+    if (serviceContact.deleted) {
       // We do not import contacts that are deleted remotely
       return Promise.resolve({action: 'none'});
     }
@@ -119,6 +118,15 @@ var MozContactConnector = (function MozContactConnector() {
 
   function getGoogleId(mozId) {
     return localStorage.getItem('mozcontact#' + mozId);
+  }
+
+  function forgetLink(gContactId) {
+    var mozContactId = localStorage.getItem(gContactId);
+    localStorage.removeItem('mozcontact#' + mozContactId);
+    localStorage.removeItem(gContactId);
+    removeKnownMozId(mozContactId);
+    // forget etag
+    localStorage.removeItem('mozcontact-etag#' + mozContactId);
   }
 
   function rememberLink(mozContactId, gContactId) {
@@ -290,7 +298,7 @@ var MozContactConnector = (function MozContactConnector() {
       // find removed contacts
       knownMozIds.forEach( id => {
         if (!foundContactByIds.has(id)) {
-          contacts.push({ id, isDeleted: true });
+          contacts.push({ id, deleted: true });
         }
       });
 
@@ -320,7 +328,8 @@ var MozContactConnector = (function MozContactConnector() {
     importContact: importContact,
     getChangedMozContacts: getChangedMozContacts,
     getGoogleId: getGoogleId,
-    rememberLink: rememberLink
+    rememberLink: rememberLink,
+    forgetLink: forgetLink
   };
 
 })();

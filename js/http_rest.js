@@ -75,6 +75,7 @@ if (!window.Rest) {
 
       get: makeRequest.bind(this, 'GET'),
       post: makeRequest.bind(this, 'POST'),
+      delete: makeRequest.bind(this, 'DELETE'),
       put: makeRequest.bind(this, 'PUT')
     };
 

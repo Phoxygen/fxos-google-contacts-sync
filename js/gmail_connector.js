@@ -447,41 +447,55 @@ var GmailConnector = (function GmailConnector() {
     return entry.querySelector('link[rel="edit"]').getAttribute('href');
   };
 
+  var forgetContact = function forgetContact(id) {
+    localStorage.removeItem('gContact#' + id);
+    MozContactConnector.forgetLink(id);
+
+  }
+
   var updateContact = function updateContact(id, updatingContact, accessToken) {
-
-    if (updatingContact.isDeleted) {
-      // TODO
-      console.log('Will delete contact ', id);
-      return Promise.resolve();
-    }
-
     var entry = getXMLEntry(id);
     if (!entry) {
-      throw new Error('No entry for gContact ' + id);
+      // something went wrong there: we have an id without an entry. This is
+      // really not a situation that should appear.
+      if (updatingContact.deleted) {
+        // in case of deleted contacts, we can just forget the link.
+        MozContactConnector.forgetLink(id);
+        return Promise.resolve({action: 'none', type: 'google', id: 'deleted'});
+      } else {
+        return Promise.reject(new Error('No entry for gContact ' + id));
+      }
     }
-    updateContactEntry(entry, updatingContact);
-
     var url = getEditUrl(entry);
 
-    return Rest.put(url, {
-      'requestHeaders': buildPutHeaders(accessToken, getEtag(entry)),
-      'responseType': 'xml'
-    }, entrySerializer.serializeToString(entry))
-    .then( result => {
-      if (result.status == 200) {
-        localStorage.setItem('gContact#' + id,
-          entrySerializer.serializeToString(result.response.documentElement));
-        return {
-          type: 'google',
-          action: 'updated',
-          id
-        };
-      } else if (result.status == 412) {
-        throw new Error('changed');
-      } else {
-        throw new Error(`Error when PUTing on url ${url}: ${result.status}`);
-      }
-    });
+    if (updatingContact.deleted) {
+      return Rest.delete(url, {
+        'requestHeaders': buildPutHeaders(accessToken, getEtag(entry)),
+        'responseType': 'xml'
+      }).then( result => {
+        if (result.status == 200) {
+          forgetContact(id);
+          return { type: 'google', action: 'deleted', id };
+        }
+      });
+    } else {
+      updateContactEntry(entry, updatingContact);
+      return Rest.put(url, {
+        'requestHeaders': buildPutHeaders(accessToken, getEtag(entry)),
+        'responseType': 'xml'
+      }, entrySerializer.serializeToString(entry))
+      .then( result => {
+        if (result.status == 200) {
+          localStorage.setItem('gContact#' + id,
+            entrySerializer.serializeToString(result.response.documentElement));
+          return { type: 'google', action: 'updated', id };
+        } else if (result.status == 412) {
+          throw new Error('changed');
+        } else {
+          throw new Error(`Error when PUTing on url ${url}: ${result.status}`);
+        }
+      });
+    }
   };
 
   var getValueForNode = function getValueForNode(doc, name, def) {
