@@ -258,19 +258,21 @@ var GmailConnector = (function GmailConnector() {
       emailTag.parentNode.removeChild(emailTag);
     }
     // create new elem
-    for (var email of updatingContact.email) {
-      var elm = document.createElementNS(GD_NAMESPACE, 'email');
-      // deal with type
-      var type = email.type.length === 0 ? '' : email.type[0];
-      if (type === 'work' || type === 'home' || type === 'other') {
-        elm.setAttribute('rel', `http://schemas.google.com/g/2005#${type}`);
-      } else {
-        elm.setAttribute('label', type);
+    if (updatingContact.email) {
+      for (var email of updatingContact.email) {
+        var elm = document.createElementNS(GD_NAMESPACE, 'email');
+        // deal with type
+        var type = email.type.length === 0 ? '' : email.type[0];
+        if (type === 'work' || type === 'home' || type === 'other') {
+          elm.setAttribute('rel', `http://schemas.google.com/g/2005#${type}`);
+        } else {
+          elm.setAttribute('label', type);
+        }
+        // deal with address
+        elm.setAttribute('address', email.value);
+        elm.setAttribute('primary', !!email.pref);
+        entry.appendChild(elm);
       }
-      // deal with address
-      elm.setAttribute('address', email.value);
-      elm.setAttribute('primary', !!email.pref);
-      entry.appendChild(elm);
     }
 
     // IM
@@ -336,17 +338,19 @@ var GmailConnector = (function GmailConnector() {
     var TEL_TYPE_LABEL_MAP = {
       'Google Voice': 'grandcentral'
     }
-    for (var tel of updatingContact.tel) {
-      var elm = document.createElementNS(GD_NAMESPACE, 'phoneNumber');
-      var type = tel.type.length === 0 ? '' : tel.type[0];
-      if (TEL_TYPE_REL_MAP[type]) {
-        elm.setAttribute('rel', TEL_TYPE_REL_MAP[type])
-      } else {
-        elm.setAttribute('label', TEL_TYPE_LABEL_MAP[type] || type);
+    if (updatingContact.tel) {
+      for (var tel of updatingContact.tel) {
+        var elm = document.createElementNS(GD_NAMESPACE, 'phoneNumber');
+        var type = tel.type.length === 0 ? '' : tel.type[0];
+        if (TEL_TYPE_REL_MAP[type]) {
+          elm.setAttribute('rel', TEL_TYPE_REL_MAP[type])
+        } else {
+          elm.setAttribute('label', TEL_TYPE_LABEL_MAP[type] || type);
+        }
+        elm.setAttribute('primary', !!tel.pref);
+        elm.textContent = tel.value;
+        entry.appendChild(elm);
       }
-      elm.setAttribute('primary', !!tel.pref);
-      elm.textContent = tel.value;
-      entry.appendChild(elm);
     }
 
     // organization
