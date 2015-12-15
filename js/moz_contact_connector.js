@@ -252,14 +252,14 @@ var MozContactConnector = (function MozContactConnector() {
    * Yep, that's what I meant by bad.
    */
   function getChangedMozContacts(from, to) {
-    var foundContactIds = [];
+    var foundContactByIds = new Map();
     return new Promise(function(resolve, reject) {
       var contacts = [];
       var req = navigator.mozContacts.getAll();
       req.onsuccess = function() {
         if (this.result ) {
           // remember all the ids to find deleted contact later.
-          foundContactIds.push(this.result.id);
+          foundContactByIds.set(this.result.id, this.result);
           if ((!from || this.result.updated > from) &&
               (!to || this.result.updated < to) &&
               // ignoring contacts we inserted as a result of last sync
@@ -277,17 +277,24 @@ var MozContactConnector = (function MozContactConnector() {
       req.onerror = reject;
 
     }).then(contacts => {
-      // find removed contact.
-      var knownMozIdsStr = localStorage.getItem(knownMozIds);
+      var knownMozIdsStr = localStorage.getItem('knownMozIds');
       if (knownMozIdsStr) {
         var knownMozIds = knownMozIdsStr.split(',');
+      } else {
+        knownMozIds = [];
+      }
 
-        var deletedElements = knownMozIds.filter(function(el) {
-          return foundContactIds.indexOf(el) < 0;
-        });
+      // find removed contacts
+      knownMozIds.forEach( id => {
+        if (!foundContactByIds.has(id)) {
+          contacts.push({ id, isDeleted: true });
+        }
+      });
 
-        for (var el of deletedElements) {
-          contacts.push({ id: el, isDeleted: true });
+      // find created contacts
+      for (var [id, contact] of foundContactByIds) {
+        if (knownMozIds.indexOf(id) < 0) {
+          contacts.push(contact);
         }
       }
       return contacts;
